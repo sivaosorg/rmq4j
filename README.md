@@ -88,6 +88,9 @@ implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web
 // The "spring-boot-configuration-processor" library, version 2.7.18,
 // is a Spring Boot module that processes configuration metadata annotations to generate metadata files and aid in auto-configuration of Spring applications.
 implementation group: 'org.springframework.boot', name: 'spring-boot-configuration-processor', version: '2.7.18'
+// The "spring-boot-starter-amqp" library, version 2.7.18, is a Spring Boot starter module that simplifies the integration of AMQP (Advanced Message Queuing Protocol) messaging with Spring applications.
+// It provides essential dependencies and configurations for working with messaging systems like RabbitMQ, enabling developers to build robust and scalable message-driven applications with minimal setup.
+implementation group: 'org.springframework.boot', name: 'spring-boot-starter-amqp', version: '2.7.18'
 ```
 
 ## Integration
