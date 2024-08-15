@@ -1,5 +1,44 @@
 # ################################
-# Spring Wizards2s4j Config
-# 2024-06-16 10:48:54
+# Spring Wizards2s4j Configuration
+# Last Updated: 2024-06-16 10:48:54
 # ################################
-# ####### Add configs yaml #######
+
+# This YAML configuration file is for the rmq4j module of the Spring Boot application.
+# It contains the configuration settings for enabling/disabling the module, debugging options,
+# and specific RabbitMQ cluster details such as host, port, and SSL usage.
+
+# ####### Configuration Details #######
+---
+spring:
+  rmq4j:
+    enabled: false # Global toggle for the rmq4j module. Set to 'true' to enable the module.
+    debugging: false # Enable debugging mode for detailed logs and error traces. Set to 'true' for more verbose logging.
+    default_cluster: "cluster01" # The name of the default cluster that the application will connect to if not specified otherwise.
+    clusters:
+      cluster01: # Configuration for the first RabbitMQ cluster named "cluster01".
+        enabled: false # Toggle to enable or disable this specific cluster configuration.
+        host: 127.0.0.1  # Hostname or IP address of the RabbitMQ server for cluster01.
+        port: 5672 # The port on which the RabbitMQ server is listening.
+        username: admin01 # Username for authenticating with the RabbitMQ server.
+        password: pwd01 # Password for authenticating with the RabbitMQ server.
+        virtual_host: "/vhost" # Virtual host to be used within the RabbitMQ server.
+        use_ssl: false # Boolean flag to indicate if SSL should be used for secure connections.
+        desc: "The default cluster01"
+      cluster02:
+        enabled: false
+        host: 127.0.0.1
+        port: 5672
+        username: admin02
+        password: pwd02
+        virtual_host: "/vhost"
+        use_ssl: false
+        desc: "The default cluster02"
+
+# ################################
+# Additional Notes:
+# 1. `enabled` at the root level (`spring.rmq4j.enabled`) globally enables or disables the rmq4j module.
+# 2. Each cluster under `clusters` has its own `enabled` flag, allowing you to configure multiple clusters
+#    but selectively enable only those you need at runtime.
+# 3. Ensure that the `default_cluster` points to one of the defined clusters in the `clusters` section.
+# 4. SSL usage is controlled via the `use_ssl` field for secure communication. If SSL is enabled, ensure the proper certificates are in place.
+# ################################
