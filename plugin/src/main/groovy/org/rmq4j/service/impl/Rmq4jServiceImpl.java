@@ -61,7 +61,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * otherwise, an empty {@link Optional}.
      */
     @Override
-    public Optional<Rmq4jProperties.Node> getCluster(String key) {
+    public Optional<Rmq4jProperties.Node> getNode(String key) {
         if (!this.isEnabled() || String4j.isEmpty(key)) {
             return Optional.empty();
         }
@@ -71,7 +71,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     /**
      * Retrieves a specific cluster configuration based on the provided key, but only if the cluster is enabled.
      * <p>
-     * This method first calls {@link #getCluster(String)} to retrieve the cluster configuration for the given key.
+     * This method first calls {@link #getNode(String)} to retrieve the cluster configuration for the given key.
      * If the cluster configuration is present, it further checks if the cluster is enabled.
      * If the cluster is enabled, it returns the configuration wrapped in an {@link Optional}.
      * If the configuration is not present or the cluster is not enabled, it returns an empty {@link Optional}.
@@ -81,8 +81,8 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * otherwise, an empty {@link Optional}.
      */
     @Override
-    public Optional<Rmq4jProperties.Node> getClusterActivated(String key) {
-        Optional<Rmq4jProperties.Node> cluster = this.getCluster(key);
+    public Optional<Rmq4jProperties.Node> getNodeActivated(String key) {
+        Optional<Rmq4jProperties.Node> cluster = this.getNode(key);
         if (!cluster.isPresent()) {
             return cluster;
         }
@@ -105,7 +105,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      */
     @Override
     public Optional<ConnectionFactory> createFactory(Rmq4jProperties.Node node) {
-        if (node == null || !node.isEnabled()) {
+        if (node == null) {
             return Optional.empty();
         }
         ConnectionFactory factory = new ConnectionFactory();
