@@ -15,7 +15,7 @@ public interface Rmq4jService {
 
     Optional<Rmq4jProperties.Node> getCluster(String key);
 
-    Optional<Rmq4jProperties.Node> getClusterK(String key);
+    Optional<Rmq4jProperties.Node> getClusterActivated(String key);
 
     Optional<ConnectionFactory> createFactory(Rmq4jProperties.Node node);
 

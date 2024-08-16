@@ -81,7 +81,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * otherwise, an empty {@link Optional}.
      */
     @Override
-    public Optional<Rmq4jProperties.Node> getClusterK(String key) {
+    public Optional<Rmq4jProperties.Node> getClusterActivated(String key) {
         Optional<Rmq4jProperties.Node> cluster = this.getCluster(key);
         if (!cluster.isPresent()) {
             return cluster;
