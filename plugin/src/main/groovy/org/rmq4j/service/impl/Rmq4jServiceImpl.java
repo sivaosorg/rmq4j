@@ -6,6 +6,7 @@ import org.rmq4j.service.Rmq4jService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -173,6 +174,31 @@ public class Rmq4jServiceImpl implements Rmq4jService {
             return Optional.empty();
         }
         return Optional.of(new RabbitTemplate(factory.get()));
+    }
+
+    /**
+     * Creates a {@link RabbitAdmin} for RabbitMQ based on the provided cluster configuration.
+     * <p>
+     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Node)} to create a
+     * {@link CachingConnectionFactory} from the given cluster configuration. If the creation of the
+     * {@link CachingConnectionFactory} is successful, it wraps the factory in a {@link RabbitAdmin}
+     * and returns it as an {@link Optional}.
+     * <p>
+     * If the {@link CachingConnectionFactory} could not be created (e.g., due to invalid configuration),
+     * it returns an empty {@link Optional}.
+     *
+     * @param node The cluster configuration used to create the {@link CachingConnectionFactory}.
+     * @return An {@link Optional} containing the {@link RabbitAdmin} if the {@link CachingConnectionFactory}
+     * was created successfully; otherwise, an empty {@link Optional}.
+     */
+    @SuppressWarnings({"OptionalIsPresent"})
+    @Override
+    public Optional<RabbitAdmin> createAdm(Rmq4jProperties.Node node) {
+        Optional<CachingConnectionFactory> factory = this.createCacheConnFactory(node);
+        if (!factory.isPresent()) {
+            return Optional.empty();
+        }
+        return Optional.of(new RabbitAdmin(factory.get()));
     }
 
     /**
