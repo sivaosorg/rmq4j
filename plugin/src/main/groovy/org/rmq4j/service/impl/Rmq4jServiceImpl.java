@@ -173,7 +173,30 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         if (!factory.isPresent()) {
             return Optional.empty();
         }
-        return Optional.of(new RabbitTemplate(factory.get()));
+        return this.dispatch(factory.get());
+    }
+
+    /**
+     * Creates a {@link RabbitTemplate} for RabbitMQ based on the provided cluster configuration.
+     * <p>
+     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Node)} to create a
+     * {@link CachingConnectionFactory} from the given cluster configuration. If the creation of the
+     * {@link CachingConnectionFactory} is successful, it wraps the factory in a {@link RabbitTemplate}
+     * and returns it as an {@link Optional}.
+     * <p>
+     * If the {@link CachingConnectionFactory} could not be created (e.g., due to invalid configuration),
+     * it returns an empty {@link Optional}.
+     *
+     * @param factory The cluster configuration used to create the {@link CachingConnectionFactory}.
+     * @return An {@link Optional} containing the {@link RabbitTemplate} if the {@link CachingConnectionFactory}
+     * was created successfully; otherwise, an empty {@link Optional}.
+     */
+    @Override
+    public Optional<RabbitTemplate> dispatch(CachingConnectionFactory factory) {
+        if (factory == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new RabbitTemplate(factory));
     }
 
     /**

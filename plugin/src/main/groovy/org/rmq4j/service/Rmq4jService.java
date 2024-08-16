@@ -24,6 +24,8 @@ public interface Rmq4jService {
 
     Optional<RabbitTemplate> dispatch(Rmq4jProperties.Node node);
 
+    Optional<RabbitTemplate> dispatch(CachingConnectionFactory factory);
+
     Optional<RabbitAdmin> createAdm(Rmq4jProperties.Node node);
 
     String getURLConnSchema(Rmq4jProperties.Node node);
