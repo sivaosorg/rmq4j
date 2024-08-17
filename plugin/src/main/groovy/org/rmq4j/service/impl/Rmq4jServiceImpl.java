@@ -50,6 +50,14 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     }
 
     /**
+     * @return map of cluster configuration, class {@link Map}
+     */
+    @Override
+    public Map<String, Rmq4jProperties.Node> getClusters() {
+        return properties.getClusters();
+    }
+
+    /**
      * Retrieves a specific cluster configuration based on the provided key.
      * <p>
      * This method checks if the `rmq4j` module is enabled and if the provided key is not empty.
@@ -66,7 +74,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         if (!this.isEnabled() || String4j.isEmpty(key)) {
             return Optional.empty();
         }
-        return properties.getClusters().entrySet().stream().filter(e -> e.getKey().equals(key)).map(Map.Entry::getValue).findFirst();
+        return this.getClusters().entrySet().stream().filter(e -> e.getKey().equals(key)).map(Map.Entry::getValue).findFirst();
     }
 
     /**

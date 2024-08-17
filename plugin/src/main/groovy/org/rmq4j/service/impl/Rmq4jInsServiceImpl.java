@@ -23,13 +23,11 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
     protected final Map<String, CachingConnectionFactory> factories = new ConcurrentHashMap<>();
     protected final Map<String, RabbitTemplate> templates = new ConcurrentHashMap<>();
 
-    protected final Rmq4jProperties properties;
     protected final Rmq4jService rmq4jService;
 
     @Autowired
-    public Rmq4jInsServiceImpl(Rmq4jProperties properties,
-                               Rmq4jService rmq4jService) {
-        this.properties = properties;
+    public Rmq4jInsServiceImpl(
+            Rmq4jService rmq4jService) {
         this.rmq4jService = rmq4jService;
     }
 
@@ -50,7 +48,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
         if (this.exists()) {
             return;
         }
-        for (Map.Entry<String, Rmq4jProperties.Node> entry : properties.getClusters().entrySet()) {
+        for (Map.Entry<String, Rmq4jProperties.Node> entry : rmq4jService.getClusters().entrySet()) {
             if (!entry.getValue().isEnabled()) {
                 continue;
             }

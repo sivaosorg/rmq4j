@@ -6,13 +6,17 @@ import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
+import java.util.Map;
 import java.util.Optional;
 
 public interface Rmq4jService {
 
+    @SuppressWarnings({"BooleanMethodIsAlwaysInverted"})
     boolean isEnabled();
 
     boolean isDebugging();
+
+    Map<String, Rmq4jProperties.Node> getClusters();
 
     Optional<Rmq4jProperties.Node> getNode(String key);
 
