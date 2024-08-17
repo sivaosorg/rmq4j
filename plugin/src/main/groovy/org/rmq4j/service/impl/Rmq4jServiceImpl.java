@@ -115,7 +115,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      */
     @Override
     public Optional<ConnectionFactory> createFactory(Rmq4jProperties.Connection connection) {
-        if (connection == null) {
+        if (!this.isEnabled() || connection == null) {
             return Optional.empty();
         }
         ConnectionFactory factory = new ConnectionFactory();
@@ -202,7 +202,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      */
     @Override
     public Optional<RabbitTemplate> dispatch(CachingConnectionFactory factory) {
-        if (factory == null) {
+        if (!this.isEnabled() || factory == null) {
             return Optional.empty();
         }
         RabbitTemplate template = new RabbitTemplate(factory);
