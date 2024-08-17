@@ -16,11 +16,11 @@ public class Rmq4jProperties implements Serializable {
         super();
     }
 
-    private boolean enabled = false;
-    private boolean debugging = false;
-    private String defaultCluster; // default_cluster
+    private boolean enabled = false; // Global toggle for the Rmq4j module. Set to 'true' to enable the module.
+    private boolean debugging = false; // Enable debugging mode for detailed logs and error traces. Set to 'true' for more verbose logging.
+    private String defaultCluster; // default_cluster, The name of the default cluster that the application will connect to if not specified otherwise.
     private Map<String, Connection> clusters = new HashMap<>(); // clusters
-    private List<Config> configs = new ArrayList<>(); // configs
+    private List<Config> configs = new ArrayList<>(); // configs. Define specific configurations for exchanges, queues, and bindings within the clusters.
 
     public boolean isEnabled() {
         return enabled;
@@ -67,13 +67,13 @@ public class Rmq4jProperties implements Serializable {
             super();
         }
 
-        private boolean enabled = false;
-        private String host;
-        private int port;
-        private String username;
-        private String password;
-        private String virtualHost; // virtual_host
-        private boolean useSSL = false; // use_ssl
+        private boolean enabled = false; // Toggle to enable or disable this specific cluster configuration.
+        private String host; // Hostname or IP address of the RabbitMQ server.
+        private int port; // The port on which the RabbitMQ server is listening.
+        private String username; // Username for authenticating with the RabbitMQ server.
+        private String password; // Password for authenticating with the RabbitMQ server.
+        private String virtualHost; // virtual_host, Virtual host to be used within the RabbitMQ server.
+        private boolean useSSL = false; // use_ssl, Boolean flag to indicate if SSL should be used for secure connections.
         private String desc;
 
         public boolean isEnabled() {
@@ -146,14 +146,14 @@ public class Rmq4jProperties implements Serializable {
             super();
         }
 
-        private String clusterKey; // cluster_key
-        private String dispatchKey; // dispatch_key
-        private String desc;
-        private boolean enabled = false;
-        private boolean debugging = false;
-        private Exchange exchange = new Exchange(); // exchange
-        private Queue queue = new Queue(); // queue
-        private Bind bind = new Bind(); // bind
+        private String clusterKey; // cluster_key, Reference to the cluster this configuration applies to.
+        private String dispatchKey; // dispatch_key, Unique dispatch key to identify this particular configuration.
+        private String desc; // Description of this configuration's purpose.
+        private boolean enabled = false; // Toggle to enable or disable this specific configuration.
+        private boolean debugging = false; // Enable debugging mode for detailed logs within this configuration.
+        private Exchange exchange = new Exchange(); // exchange, Exchange settings for publishing messages.
+        private Queue queue = new Queue(); // queue, Queue settings for consuming messages.
+        private Bind bind = new Bind(); // bind, Binding settings to link the exchange and the queue.
 
         public String getClusterKey() {
             return clusterKey;
@@ -226,13 +226,13 @@ public class Rmq4jProperties implements Serializable {
             super();
         }
 
-        private String name;
-        private String kind;
-        private boolean durable = false;
-        private boolean clearable = false;
-        private boolean internal = false;
-        private boolean delayable = false;
-        private Map<String, Object> arguments = new HashMap<>(); // arguments
+        private String name; // Name of the exchange to use.
+        private String kind; // Type of exchange: can be 'fanout', 'topic', 'headers', or 'direct'.
+        private boolean durable = false; // If true, the exchange will survive server restarts.
+        private boolean clearable = false; // If true, the exchange will be deleted once no longer used.
+        private boolean internal = false; // If true, the exchange is for internal use only, not for publishing from the client.
+        private boolean delayable = false; // If true, the exchange supports delayed message delivery.
+        private Map<String, Object> arguments = new HashMap<>(); // arguments, Custom arguments for the exchange as key-value. This can include settings like retry count.
 
         public String getName() {
             return name;
@@ -297,10 +297,10 @@ public class Rmq4jProperties implements Serializable {
             super();
         }
 
-        private String name;
-        private boolean durable = false;
-        private boolean exclusive = false;
-        private boolean clearable = false;
+        private String name; // Name of the queue to bind to the exchange.
+        private boolean durable = false; // If true, the queue will survive server restarts.
+        private boolean exclusive = false; // If true, the queue is exclusive to this connection and will be deleted once the connection closes.
+        private boolean clearable = false; // If true, the queue will be deleted once no longer used.
 
         public String getName() {
             return name;
@@ -340,7 +340,7 @@ public class Rmq4jProperties implements Serializable {
             super();
         }
 
-        private String routingKey; // routing_key
+        private String routingKey; // routing_key, Routing key for the binding. Used to route messages to the correct queue.
 
         public String getRoutingKey() {
             return routingKey;
