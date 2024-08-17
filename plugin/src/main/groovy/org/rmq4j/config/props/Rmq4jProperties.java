@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -16,7 +17,7 @@ public class Rmq4jProperties implements Serializable {
     private boolean enabled = false;
     private boolean debugging = false;
     private String defaultCluster; // default_cluster
-    private Map<String, Connection> clusters; // clusters
+    private Map<String, Connection> clusters = new HashMap<>(); // clusters
 
     public boolean isEnabled() {
         return enabled;

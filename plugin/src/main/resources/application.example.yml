@@ -1,9 +1,10 @@
+#file: noinspection SpellCheckingInspection
 # ################################
-# Spring Wizards2s4j Configuration
+# Spring Rmq4j Configuration
 # Last Updated: 2024-06-16 10:48:54
 # ################################
 
-# This YAML configuration file is for the rmq4j module of the Spring Boot application.
+# This YAML configuration file is for the Rmq4j module of the Spring Boot application.
 # It contains the configuration settings for enabling/disabling the module, debugging options,
 # and specific RabbitMQ cluster details such as host, port, and SSL usage.
 
@@ -11,7 +12,7 @@
 ---
 spring:
   rmq4j:
-    enabled: false # Global toggle for the rmq4j module. Set to 'true' to enable the module.
+    enabled: false # Global toggle for the Rmq4j module. Set to 'true' to enable the module.
     debugging: false # Enable debugging mode for detailed logs and error traces. Set to 'true' for more verbose logging.
     default_cluster: "cluster01" # The name of the default cluster that the application will connect to if not specified otherwise.
     clusters:
@@ -33,14 +34,56 @@ spring:
         virtual_host: "/vhost"
         use_ssl: false
         desc: "The default cluster02"
-    configs:
-      - key: "guest"
+    configs: # Define specific configurations for exchanges, queues, and bindings within the clusters.
+      - cluster_key: "cluster01" # Reference to the cluster this configuration applies to.
+        dispatch_key: "DP001" # Unique dispatch key to identify this particular configuration.
+        desc: "publish logs for changes order status" # Description of this configuration's purpose.
+        enabled: false # Toggle to enable or disable this specific configuration.
+        debugging: false # Enable debugging mode for detailed logs within this configuration.
+        exchange: # Exchange settings for publishing messages.
+          name: "guest_exchange" # Name of the exchange to use.
+          kind: "topic" # Type of exchange: can be 'fanout', 'topic', 'headers', or 'direct'.
+          durable: false # If true, the exchange will survive server restarts.
+          clearable: false # If true, the exchange will be deleted once no longer used.
+          internal: false # If true, the exchange is for internal use only, not for publishing from the client.
+          delayable: false # If true, the exchange supports delayed message delivery.
+          arguments: # Custom arguments for the exchange as key-value. This can include settings like retry count.
+            retry: 1
+        queue: # Queue settings for consuming messages.
+          name: "guest_queue" # Name of the queue to bind to the exchange.
+          durable: false # If true, the queue will survive server restarts.
+          exclusive: false # If true, the queue is exclusive to this connection and will be deleted once the connection closes.
+          clearable: false # If true, the queue will be deleted once no longer used.
+        bind: # Binding settings to link the exchange and the queue.
+          routing_key: "" # Routing key for the binding. Used to route messages to the correct queue.
+      - cluster_key: "cluster01"
+        dispatch_key: "DP002"
+        desc: "publish logs for changes delivery status"
+        enabled: false
+        debugging: false
+        exchange:
+          name: "guest_exchange"
+          kind: "direct" # fanout, topic, headers, direct
+          durable: false
+          clearable: false
+          internal: false
+          delayable: false
+          arguments:
+            retry: 1
+        queue:
+          name: "guest_queue"
+          durable: false
+          exclusive: false
+          clearable: false
+        bind:
+          routing_key: ""
 
 # ################################
 # Additional Notes:
-# 1. `enabled` at the root level (`spring.rmq4j.enabled`) globally enables or disables the rmq4j module.
+# 1. `enabled` at the root level (`spring.rmq4j.enabled`) globally enables or disables the Rmq4j module.
 # 2. Each cluster under `clusters` has its own `enabled` flag, allowing you to configure multiple clusters
 #    but selectively enable only those you need at runtime.
 # 3. Ensure that the `default_cluster` points to one of the defined clusters in the `clusters` section.
 # 4. SSL usage is controlled via the `use_ssl` field for secure communication. If SSL is enabled, ensure the proper certificates are in place.
+# 5. The `configs` section allows you to define multiple configurations for different use cases, each linked to a specific cluster.
 # ################################
