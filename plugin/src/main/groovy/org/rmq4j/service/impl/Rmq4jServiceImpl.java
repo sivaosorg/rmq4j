@@ -54,7 +54,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * @return map of cluster configuration, class {@link Map}
      */
     @Override
-    public Map<String, Rmq4jProperties.Node> getClusters() {
+    public Map<String, Rmq4jProperties.Connection> getConnections() {
         return properties.getClusters();
     }
 
@@ -67,32 +67,32 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * If the module is not enabled or the key is empty, it returns an empty `Optional`.
      *
      * @param key The key (cluster name) used to look up the cluster configuration in the clusters map.
-     * @return An {@link Optional} containing the {@link Rmq4jProperties.Node} associated with the given key if it exists;
+     * @return An {@link Optional} containing the {@link Rmq4jProperties.Connection} associated with the given key if it exists;
      * otherwise, an empty {@link Optional}.
      */
     @Override
-    public Optional<Rmq4jProperties.Node> getNode(String key) {
+    public Optional<Rmq4jProperties.Connection> getConn(String key) {
         if (!this.isEnabled() || String4j.isEmpty(key)) {
             return Optional.empty();
         }
-        return this.getClusters().entrySet().stream().filter(e -> e.getKey().equals(key)).map(Map.Entry::getValue).findFirst();
+        return this.getConnections().entrySet().stream().filter(e -> e.getKey().equals(key)).map(Map.Entry::getValue).findFirst();
     }
 
     /**
      * Retrieves a specific cluster configuration based on the provided key, but only if the cluster is enabled.
      * <p>
-     * This method first calls {@link #getNode(String)} to retrieve the cluster configuration for the given key.
+     * This method first calls {@link #getConn(String)} to retrieve the cluster configuration for the given key.
      * If the cluster configuration is present, it further checks if the cluster is enabled.
      * If the cluster is enabled, it returns the configuration wrapped in an {@link Optional}.
      * If the configuration is not present or the cluster is not enabled, it returns an empty {@link Optional}.
      *
      * @param key The key (cluster name) used to look up the cluster configuration in the clusters map.
-     * @return An {@link Optional} containing the {@link Rmq4jProperties.Node} associated with the given key if it exists and is enabled;
+     * @return An {@link Optional} containing the {@link Rmq4jProperties.Connection} associated with the given key if it exists and is enabled;
      * otherwise, an empty {@link Optional}.
      */
     @Override
-    public Optional<Rmq4jProperties.Node> getNodeActivated(String key) {
-        Optional<Rmq4jProperties.Node> cluster = this.getNode(key);
+    public Optional<Rmq4jProperties.Connection> getConnActivated(String key) {
+        Optional<Rmq4jProperties.Connection> cluster = this.getConn(key);
         if (!cluster.isPresent()) {
             return cluster;
         }
@@ -102,58 +102,58 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     /**
      * Creates a {@link ConnectionFactory} for RabbitMQ based on the provided cluster configuration.
      * <p>
-     * This method initializes a {@link ConnectionFactory} using the details from the given {@link Rmq4jProperties.Node}.
+     * This method initializes a {@link ConnectionFactory} using the details from the given {@link Rmq4jProperties.Connection}.
      * It sets the host, port, virtual host, username, and password on the factory. If SSL is enabled in the configuration,
      * it applies SSL settings to the factory.
      * <p>
      * If the configuration is null or the cluster is not enabled, it returns an empty {@link Optional}.
      * If an exception occurs while applying SSL settings, it logs the error and throws a {@link RuntimeException}.
      *
-     * @param node The cluster configuration used to create the {@link ConnectionFactory}.
+     * @param connection The cluster configuration used to create the {@link ConnectionFactory}.
      * @return An {@link Optional} containing the configured {@link ConnectionFactory} if the configuration is valid and SSL settings are applied successfully;
      * otherwise, an empty {@link Optional}.
      */
     @Override
-    public Optional<ConnectionFactory> createFactory(Rmq4jProperties.Node node) {
-        if (node == null) {
+    public Optional<ConnectionFactory> createFactory(Rmq4jProperties.Connection connection) {
+        if (connection == null) {
             return Optional.empty();
         }
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(node.getHost());
-        factory.setPort(node.getPort());
-        factory.setVirtualHost(node.getVirtualHost());
-        factory.setUsername(node.getUsername());
-        factory.setPassword(node.getPassword());
+        factory.setHost(connection.getHost());
+        factory.setPort(connection.getPort());
+        factory.setVirtualHost(connection.getVirtualHost());
+        factory.setUsername(connection.getUsername());
+        factory.setPassword(connection.getPassword());
         try {
-            if (node.isUseSSL()) {
+            if (connection.isUseSSL()) {
                 factory.useSslProtocol();
             }
             return Optional.of(factory);
         } catch (Exception e) {
             logger.error("{} Rmq4j, SSL configuration for RabbitMQ could not be applied cause got an exception: {} by URL schema: {}",
-                    IconType.ERROR.getCode(), e.getMessage(), this.getURLConnSchema(node), e);
-            throw new RuntimeException(String.format("SSL configuration for RabbitMQ could not be applied successfully (%s)", this.getURLConnSchema(node)), e);
+                    IconType.ERROR.getCode(), e.getMessage(), this.getURLConnSchema(connection), e);
+            throw new RuntimeException(String.format("SSL configuration for RabbitMQ could not be applied successfully (%s)", this.getURLConnSchema(connection)), e);
         }
     }
 
     /**
      * Creates a {@link CachingConnectionFactory} for RabbitMQ based on the provided cluster configuration.
      * <p>
-     * This method first uses {@link #createFactory(Rmq4jProperties.Node)} to create a {@link ConnectionFactory}
+     * This method first uses {@link #createFactory(Rmq4jProperties.Connection)} to create a {@link ConnectionFactory}
      * from the given cluster configuration. If the factory creation is successful, it wraps the factory in a
      * {@link CachingConnectionFactory} and returns it as an {@link Optional}.
      * <p>
      * If the {@link ConnectionFactory} could not be created (e.g., due to invalid configuration), it returns
      * an empty {@link Optional}.
      *
-     * @param node The cluster configuration used to create the {@link ConnectionFactory}.
+     * @param connection The cluster configuration used to create the {@link ConnectionFactory}.
      * @return An {@link Optional} containing the {@link CachingConnectionFactory} if the {@link ConnectionFactory}
      * was created successfully; otherwise, an empty {@link Optional}.
      */
     @SuppressWarnings({"OptionalIsPresent"})
     @Override
-    public Optional<CachingConnectionFactory> createCacheConnFactory(Rmq4jProperties.Node node) {
-        Optional<ConnectionFactory> factory = this.createFactory(node);
+    public Optional<CachingConnectionFactory> createCacheConnFactory(Rmq4jProperties.Connection connection) {
+        Optional<ConnectionFactory> factory = this.createFactory(connection);
         if (!factory.isPresent()) {
             return Optional.empty();
         }
@@ -163,7 +163,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     /**
      * Creates a {@link RabbitTemplate} for RabbitMQ based on the provided cluster configuration.
      * <p>
-     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Node)} to create a
+     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Connection)} to create a
      * {@link CachingConnectionFactory} from the given cluster configuration. If the creation of the
      * {@link CachingConnectionFactory} is successful, it wraps the factory in a {@link RabbitTemplate}
      * and returns it as an {@link Optional}.
@@ -171,14 +171,14 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * If the {@link CachingConnectionFactory} could not be created (e.g., due to invalid configuration),
      * it returns an empty {@link Optional}.
      *
-     * @param node The cluster configuration used to create the {@link CachingConnectionFactory}.
+     * @param connection The cluster configuration used to create the {@link CachingConnectionFactory}.
      * @return An {@link Optional} containing the {@link RabbitTemplate} if the {@link CachingConnectionFactory}
      * was created successfully; otherwise, an empty {@link Optional}.
      */
     @SuppressWarnings({"OptionalIsPresent"})
     @Override
-    public Optional<RabbitTemplate> dispatch(Rmq4jProperties.Node node) {
-        Optional<CachingConnectionFactory> factory = this.createCacheConnFactory(node);
+    public Optional<RabbitTemplate> dispatch(Rmq4jProperties.Connection connection) {
+        Optional<CachingConnectionFactory> factory = this.createCacheConnFactory(connection);
         if (!factory.isPresent()) {
             return Optional.empty();
         }
@@ -188,7 +188,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     /**
      * Creates a {@link RabbitTemplate} for RabbitMQ based on the provided cluster configuration.
      * <p>
-     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Node)} to create a
+     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Connection)} to create a
      * {@link CachingConnectionFactory} from the given cluster configuration. If the creation of the
      * {@link CachingConnectionFactory} is successful, it wraps the factory in a {@link RabbitTemplate}
      * and returns it as an {@link Optional}.
@@ -213,7 +213,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     /**
      * Creates a {@link RabbitAdmin} for RabbitMQ based on the provided cluster configuration.
      * <p>
-     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Node)} to create a
+     * This method first uses {@link #createCacheConnFactory(Rmq4jProperties.Connection)} to create a
      * {@link CachingConnectionFactory} from the given cluster configuration. If the creation of the
      * {@link CachingConnectionFactory} is successful, it wraps the factory in a {@link RabbitAdmin}
      * and returns it as an {@link Optional}.
@@ -221,14 +221,14 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * If the {@link CachingConnectionFactory} could not be created (e.g., due to invalid configuration),
      * it returns an empty {@link Optional}.
      *
-     * @param node The cluster configuration used to create the {@link CachingConnectionFactory}.
+     * @param connection The cluster configuration used to create the {@link CachingConnectionFactory}.
      * @return An {@link Optional} containing the {@link RabbitAdmin} if the {@link CachingConnectionFactory}
      * was created successfully; otherwise, an empty {@link Optional}.
      */
     @SuppressWarnings({"OptionalIsPresent"})
     @Override
-    public Optional<RabbitAdmin> createAdm(Rmq4jProperties.Node node) {
-        Optional<CachingConnectionFactory> factory = this.createCacheConnFactory(node);
+    public Optional<RabbitAdmin> createAdm(Rmq4jProperties.Connection connection) {
+        Optional<CachingConnectionFactory> factory = this.createCacheConnFactory(connection);
         if (!factory.isPresent()) {
             return Optional.empty();
         }
@@ -239,24 +239,24 @@ public class Rmq4jServiceImpl implements Rmq4jService {
      * Generates the connection URL schema for RabbitMQ based on the provided cluster configuration.
      * <p>
      * This method constructs the connection URL schema using the username, password, host, port, and virtual host from
-     * the provided {@link Rmq4jProperties.Node}. The URL is formatted as "amqp://username:password@host:port".
+     * the provided {@link Rmq4jProperties.Connection}. The URL is formatted as "amqp://username:password@host:port".
      * If a virtual host is specified, it is appended to the URL.
      * <p>
      * If the provided configuration is null, it returns an empty string.
      *
-     * @param node The cluster configuration used to build the connection URL.
+     * @param connection The cluster configuration used to build the connection URL.
      * @return A string representing the RabbitMQ connection URL schema based on the provided configuration.
      */
     @Override
-    public String getURLConnSchema(Rmq4jProperties.Node node) {
-        if (node == null) {
+    public String getURLConnSchema(Rmq4jProperties.Connection connection) {
+        if (connection == null) {
             return "";
         }
         String form = String.format("amqp://%s:%s@%s:%d",
-                node.getUsername(), node.getPassword(), node.getHost(), node.getPort());
-        if (String4j.isEmpty(node.getVirtualHost())) {
+                connection.getUsername(), connection.getPassword(), connection.getHost(), connection.getPort());
+        if (String4j.isEmpty(connection.getVirtualHost())) {
             return form;
         }
-        return String.format("%s%s", form, node.getVirtualHost());
+        return String.format("%s%s", form, connection.getVirtualHost());
     }
 }

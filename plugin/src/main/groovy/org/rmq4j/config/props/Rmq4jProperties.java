@@ -16,7 +16,7 @@ public class Rmq4jProperties implements Serializable {
     private boolean enabled = false;
     private boolean debugging = false;
     private String defaultCluster; // default_cluster
-    private Map<String, Node> clusters;
+    private Map<String, Connection> clusters; // clusters
 
     public boolean isEnabled() {
         return enabled;
@@ -42,16 +42,16 @@ public class Rmq4jProperties implements Serializable {
         this.defaultCluster = defaultCluster;
     }
 
-    public Map<String, Node> getClusters() {
+    public Map<String, Connection> getClusters() {
         return clusters;
     }
 
-    public void setClusters(Map<String, Node> clusters) {
+    public void setClusters(Map<String, Connection> clusters) {
         this.clusters = clusters;
     }
 
-    public static class Node {
-        public Node() {
+    public static class Connection {
+        public Connection() {
             super();
         }
 

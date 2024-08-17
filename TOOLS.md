@@ -3,10 +3,10 @@
 You can use the tree command-line utility in Node.js to generate a tree-like structure of your project directory. Here's
 how you can use it:
 
-First, make sure you have the `tree-node-cli` package installed globally:
+First, make sure you have the `tree-connection-cli` package installed globally:
 
 ```bash
-npm install -g tree-node-cli
+npm install -g tree-connection-cli
 ```
 
 Then, navigate to your project directory and run the following command:

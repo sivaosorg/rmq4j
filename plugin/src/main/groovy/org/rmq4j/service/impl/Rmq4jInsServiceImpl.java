@@ -48,7 +48,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
         if (this.exists()) {
             return;
         }
-        for (Map.Entry<String, Rmq4jProperties.Node> entry : rmq4jService.getClusters().entrySet()) {
+        for (Map.Entry<String, Rmq4jProperties.Connection> entry : rmq4jService.getConnections().entrySet()) {
             if (!entry.getValue().isEnabled()) {
                 continue;
             }

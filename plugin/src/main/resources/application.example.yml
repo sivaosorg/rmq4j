@@ -33,6 +33,8 @@ spring:
         virtual_host: "/vhost"
         use_ssl: false
         desc: "The default cluster02"
+    configs:
+      - key: "guest"
 
 # ################################
 # Additional Notes:

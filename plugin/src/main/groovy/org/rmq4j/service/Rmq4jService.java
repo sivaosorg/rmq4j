@@ -16,21 +16,21 @@ public interface Rmq4jService {
 
     boolean isDebugging();
 
-    Map<String, Rmq4jProperties.Node> getClusters();
+    Map<String, Rmq4jProperties.Connection> getConnections();
 
-    Optional<Rmq4jProperties.Node> getNode(String key);
+    Optional<Rmq4jProperties.Connection> getConn(String key);
 
-    Optional<Rmq4jProperties.Node> getNodeActivated(String key);
+    Optional<Rmq4jProperties.Connection> getConnActivated(String key);
 
-    Optional<ConnectionFactory> createFactory(Rmq4jProperties.Node node);
+    Optional<ConnectionFactory> createFactory(Rmq4jProperties.Connection connection);
 
-    Optional<CachingConnectionFactory> createCacheConnFactory(Rmq4jProperties.Node node);
+    Optional<CachingConnectionFactory> createCacheConnFactory(Rmq4jProperties.Connection connection);
 
-    Optional<RabbitTemplate> dispatch(Rmq4jProperties.Node node);
+    Optional<RabbitTemplate> dispatch(Rmq4jProperties.Connection connection);
 
     Optional<RabbitTemplate> dispatch(CachingConnectionFactory factory);
 
-    Optional<RabbitAdmin> createAdm(Rmq4jProperties.Node node);
+    Optional<RabbitAdmin> createAdm(Rmq4jProperties.Connection connection);
 
-    String getURLConnSchema(Rmq4jProperties.Node node);
+    String getURLConnSchema(Rmq4jProperties.Connection connection);
 }
