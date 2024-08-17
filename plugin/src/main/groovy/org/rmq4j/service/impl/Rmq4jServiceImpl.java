@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.unify4j.common.Collection4j;
@@ -204,7 +205,9 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         if (factory == null) {
             return Optional.empty();
         }
-        return Optional.of(new RabbitTemplate(factory));
+        RabbitTemplate template = new RabbitTemplate(factory);
+        template.setMessageConverter(new Jackson2JsonMessageConverter());
+        return Optional.of(template);
     }
 
     /**

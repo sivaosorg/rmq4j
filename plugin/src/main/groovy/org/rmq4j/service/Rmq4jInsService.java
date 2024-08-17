@@ -14,4 +14,6 @@ public interface Rmq4jInsService {
     Optional<CachingConnectionFactory> getWorker(String key);
 
     Optional<RabbitTemplate> getDispatcher(String key);
+
+    void publish(String key, Object message);
 }

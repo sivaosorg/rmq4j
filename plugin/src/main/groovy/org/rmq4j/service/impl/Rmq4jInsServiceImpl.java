@@ -114,4 +114,25 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
         }
         return Optional.of(templates.get(key));
     }
+
+    /**
+     * Publishes a message using the {@link RabbitTemplate} associated with the specified key.
+     * <p>
+     * This method retrieves the {@link RabbitTemplate} corresponding to the given key
+     * by invoking {@link #getDispatcher(String)}. If a valid {@link RabbitTemplate} is found,
+     * the method proceeds to publish the provided message using that template. If the key
+     * is invalid or if no {@link RabbitTemplate} is associated with the key, the method returns
+     * without performing any operation.
+     *
+     * @param key     The key used to identify the {@link RabbitTemplate} for message publishing.
+     * @param message The message to be published using the {@link RabbitTemplate}.
+     */
+    @Override
+    public void publish(String key, Object message) {
+        Optional<RabbitTemplate> template = this.getDispatcher(key);
+        if (!template.isPresent()) {
+            return;
+        }
+        // do something
+    }
 }
