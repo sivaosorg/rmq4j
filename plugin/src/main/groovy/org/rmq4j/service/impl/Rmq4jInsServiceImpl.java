@@ -16,6 +16,8 @@ import org.unify4j.common.Json4j;
 import org.unify4j.common.String4j;
 import org.unify4j.model.builder.HttpStatusBuilder;
 import org.unify4j.model.builder.HttpWrapBuilder;
+import org.unify4j.model.enums.IconType;
+import org.unify4j.model.response.WrapResponse;
 
 import java.util.Map;
 import java.util.Optional;
@@ -47,25 +49,17 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
      */
     @Override
     public void snapIns() {
-        if (!rmq4jService.isEnabled()) {
-            return;
-        }
-        if (this.exists()) {
-            return;
-        }
-        for (Map.Entry<String, Rmq4jProperties.Connection> entry : rmq4jService.getConnectionsActivated().entrySet()) {
-            Optional<CachingConnectionFactory> factory = rmq4jService.createCacheConnFactory(entry.getValue());
-            if (!factory.isPresent()) {
-                continue;
+        this.snapIns(new Rmq4jWrapCallback() {
+            @Override
+            public void onCallback(WrapResponse<?> response) {
+                if (response.isSuccess()) {
+                    logger.info("{} Rmq4j, connected successfully", IconType.SUCCESS.getCode());
+                }
+                if (response.isError()) {
+                    logger.error("{} {}, [facing]: {}", IconType.ERROR.getCode(), response.getMessage(), Json4j.toJson(response.getDebug()));
+                }
             }
-            Optional<RabbitTemplate> template = rmq4jService.dispatch(factory.get());
-            if (!template.isPresent()) {
-                continue;
-            }
-
-            factories.put(entry.getKey(), factory.get());
-            templates.put(entry.getKey(), template.get());
-        }
+        });
     }
 
     /**
@@ -89,18 +83,40 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
      */
     @Override
     public void snapIns(Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>()
+                .ok(rmq4jService.getConnections())
+                .requestId(Rmq4j.getCurrentSessionId())
+                .debug("all_connections_activated", Json4j.toJson(rmq4jService.getConnectionsActivated()));
+
         if (!rmq4jService.isEnabled()) {
+            response
+                    .statusCode(HttpStatusBuilder.SERVICE_UNAVAILABLE)
+                    .message("Rmq4j, Service unavailable");
+            if (callback != null) {
+                callback.onCallback(response.build());
+            }
             return;
         }
         if (this.exists()) {
+            response.statusCode(HttpStatusBuilder.IM_USED);
+            if (callback != null) {
+                callback.onCallback(response.build());
+            }
             return;
         }
-        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(null)
-                .requestId(Rmq4j.getCurrentSessionId())
-                .body(rmq4jService.getConnections())
-                .debug("all_connections_activated", Json4j.toJson(rmq4jService.getConnectionsActivated()));
         try {
-            this.snapIns();
+            for (Map.Entry<String, Rmq4jProperties.Connection> entry : rmq4jService.getConnectionsActivated().entrySet()) {
+                Optional<CachingConnectionFactory> factory = rmq4jService.createCacheConnFactory(entry.getValue(), callback);
+                if (!factory.isPresent()) {
+                    break;
+                }
+                Optional<RabbitTemplate> template = rmq4jService.dispatch(factory.get(), callback);
+                if (!template.isPresent()) {
+                    break;
+                }
+                factories.put(entry.getKey(), factory.get());
+                templates.put(entry.getKey(), template.get());
+            }
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
