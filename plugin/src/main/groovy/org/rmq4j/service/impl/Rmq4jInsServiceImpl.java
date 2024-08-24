@@ -96,7 +96,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
-                    .message("creating multiples RabbitMQ connection failed")
+                    .message("Rmq4j, creating multiples RabbitMQ connection failed")
                     .debug("cause", e.getMessage())
                     .errors(e);
         }
