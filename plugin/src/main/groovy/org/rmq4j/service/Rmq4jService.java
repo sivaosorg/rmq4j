@@ -29,6 +29,10 @@ public interface Rmq4jService {
 
     List<Rmq4jProperties.Config> getConfigsActivated();
 
+    Optional<Rmq4jProperties.Config> getConfig(String clusterKey);
+
+    Optional<Rmq4jProperties.Config> getConfig(String clusterKey, String dispatchKey);
+
     Optional<ConnectionFactory> createFactory(Rmq4jProperties.Connection connection);
 
     Optional<ConnectionFactory> createFactory(Rmq4jProperties.Connection connection, Rmq4jWrapCallback callback);

@@ -160,6 +160,55 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     }
 
     /**
+     * Retrieves the configuration for a specific RabbitMQ cluster identified by the provided key, but only if the
+     * configuration is enabled.
+     * <p>
+     * This method first checks if the provided cluster key is empty using {@link String4j#isEmpty(CharSequence)}.
+     * If the key is empty, it returns an empty {@link Optional}.
+     * If the key is valid, it filters through the list of enabled configurations retrieved via
+     * {@link #getConfigsActivated()}, looking for a configuration that matches the provided cluster key.
+     * If a matching configuration is found, it is returned wrapped in an {@link Optional}.
+     * If no matching configuration is found, an empty {@link Optional} is returned.
+     *
+     * @param clusterKey The key identifying the RabbitMQ cluster whose configuration is to be retrieved.
+     * @return An {@link Optional} containing the {@link Rmq4jProperties.Config} associated with the given cluster key
+     * if it exists and is enabled; otherwise, an empty {@link Optional}.
+     */
+    @Override
+    public Optional<Rmq4jProperties.Config> getConfig(String clusterKey) {
+        if (String4j.isEmpty(clusterKey)) {
+            return Optional.empty();
+        }
+        return this.getConfigsActivated().stream().filter(e -> e.getClusterKey().equals(clusterKey)).findFirst();
+    }
+
+    /**
+     * Retrieves the configuration for a specific RabbitMQ cluster identified by the provided cluster key and dispatch key,
+     * but only if the configuration is enabled.
+     * <p>
+     * This method first checks if either the provided cluster key or dispatch key is empty using {@link String4j#isEmpty(CharSequence)}.
+     * If either key is empty, it returns an empty {@link Optional}.
+     * If both keys are valid, it filters through the list of enabled configurations retrieved via {@link #getConfigsActivated()},
+     * looking for a configuration that matches both the provided cluster key and dispatch key.
+     * If a matching configuration is found, it is returned wrapped in an {@link Optional}.
+     * If no matching configuration is found, an empty {@link Optional} is returned.
+     *
+     * @param clusterKey  The key identifying the RabbitMQ cluster whose configuration is to be retrieved.
+     * @param dispatchKey The key identifying the specific dispatch configuration within the cluster.
+     * @return An {@link Optional} containing the {@link Rmq4jProperties.Config} associated with the given cluster key
+     * and dispatch key if it exists and is enabled; otherwise, an empty {@link Optional}.
+     */
+    @Override
+    public Optional<Rmq4jProperties.Config> getConfig(String clusterKey, String dispatchKey) {
+        if (String4j.isEmpty(clusterKey) || String4j.isEmpty(dispatchKey)) {
+            return Optional.empty();
+        }
+        return this.getConfigsActivated().stream()
+                .filter(e -> e.getClusterKey().equals(clusterKey) && e.getDispatchKey().equals(dispatchKey))
+                .findFirst();
+    }
+
+    /**
      * Creates a {@link ConnectionFactory} for RabbitMQ based on the provided cluster configuration.
      * <p>
      * This method initializes a {@link ConnectionFactory} using the details from the given {@link Rmq4jProperties.Connection}.
