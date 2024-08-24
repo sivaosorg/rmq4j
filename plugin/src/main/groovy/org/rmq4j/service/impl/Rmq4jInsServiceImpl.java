@@ -19,6 +19,7 @@ import org.unify4j.model.builder.HttpWrapBuilder;
 import org.unify4j.model.enums.IconType;
 import org.unify4j.model.response.WrapResponse;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -113,6 +114,20 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
                 Optional<RabbitTemplate> template = rmq4jService.dispatch(factory.get(), callback);
                 if (!template.isPresent()) {
                     break;
+                }
+                List<Rmq4jProperties.Config> configs = rmq4jService.getConfigsActivated(entry.getKey());
+                if (Collection4j.isNotEmpty(configs)) {
+                    boolean stopped = false;
+                    for (Rmq4jProperties.Config e : configs) {
+                        boolean success = rmq4jService.executeConfig(factory.get(), e, callback);
+                        if (!success) {
+                            stopped = true;
+                            break;
+                        }
+                    }
+                    if (stopped) {
+                        break;
+                    }
                 }
                 factories.put(entry.getKey(), factory.get());
                 templates.put(entry.getKey(), template.get());

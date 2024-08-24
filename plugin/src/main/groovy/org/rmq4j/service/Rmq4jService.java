@@ -32,6 +32,8 @@ public interface Rmq4jService {
 
     List<Rmq4jProperties.Config> getConfigsActivated();
 
+    List<Rmq4jProperties.Config> getConfigsActivated(String clusterKey);
+
     Optional<Rmq4jProperties.Config> getConfig(String clusterKey);
 
     Optional<Rmq4jProperties.Config> getConfig(String clusterKey, String dispatchKey);
@@ -72,7 +74,13 @@ public interface Rmq4jService {
 
     void executeConfig(Rmq4jProperties.Connection connection, Rmq4jProperties.Config config);
 
+    boolean executeConfig(Rmq4jProperties.Connection connection, Rmq4jProperties.Config config, Rmq4jWrapCallback callback);
+
     void executeConfig(CachingConnectionFactory factory, Rmq4jProperties.Config config);
 
+    boolean executeConfig(CachingConnectionFactory factory, Rmq4jProperties.Config config, Rmq4jWrapCallback callback);
+
     void executeConfig(RabbitAdmin adm, Rmq4jProperties.Config config);
+
+    boolean executeConfig(RabbitAdmin adm, Rmq4jProperties.Config config, Rmq4jWrapCallback callback);
 }

@@ -162,6 +162,30 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     }
 
     /**
+     * Retrieves a list of all enabled RabbitMQ configurations.
+     * <p>
+     * This method first checks if there are any available configurations by calling {@link #isAvailableConfigs()}.
+     * If no configurations are available, it returns an empty list.
+     * If configurations are available, it filters the configurations to select only those that are enabled.
+     * The method then returns a list of enabled {@link Rmq4jProperties.Config} objects.
+     * <p>
+     * This is useful for retrieving configurations that are currently active and should be applied for RabbitMQ setups.
+     *
+     * @return A list of enabled {@link Rmq4jProperties.Config} objects. If no configurations are available or none are enabled,
+     * an empty list is returned.
+     */
+    @Override
+    public List<Rmq4jProperties.Config> getConfigsActivated(String clusterKey) {
+        if (!this.isAvailableConfigs()) {
+            return Collections.emptyList();
+        }
+        return properties.getConfigs()
+                .stream()
+                .filter(e -> e.isEnabled() && e.getClusterKey().equals(clusterKey))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Retrieves the configuration for a specific RabbitMQ cluster identified by the provided key, but only if the
      * configuration is enabled.
      * <p>
@@ -181,7 +205,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         if (String4j.isEmpty(clusterKey)) {
             return Optional.empty();
         }
-        return this.getConfigsActivated().stream().filter(e -> e.getClusterKey().equals(clusterKey)).findFirst();
+        return this.getConfigsActivated(clusterKey).stream().findFirst();
     }
 
     /**
@@ -847,6 +871,50 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     }
 
     /**
+     * Executes the RabbitMQ configuration using the provided connection details and configuration details, and invokes a callback
+     * upon completion.
+     * <p>
+     * This method first creates a {@link CachingConnectionFactory} using the provided {@link Rmq4jProperties.Connection} details.
+     * If the connection factory is successfully created, it then calls {@link #executeConfig(CachingConnectionFactory, Rmq4jProperties.Config)}
+     * to apply the RabbitMQ configuration using the created connection factory.
+     * <p>
+     * If any exception occurs during the configuration process, the method captures the error, builds a response indicating the failure,
+     * and includes details about the error and configuration in the response. The provided {@link Rmq4jWrapCallback} is then invoked
+     * with the constructed response.
+     * <p>
+     * If the connection factory cannot be created, the method returns without further action and does not invoke the callback.
+     * <p>
+     * The method returns a boolean indicating whether the configuration execution was successful.
+     *
+     * @param connection The connection details required to create a {@link CachingConnectionFactory}.
+     * @param config     The configuration object containing the details needed to configure RabbitMQ.
+     * @param callback   The callback to be executed after the configuration process is completed. The callback
+     *                   will receive a response indicating whether the configuration execution was successful or if it failed.
+     * @return A boolean value indicating whether the configuration execution was successful. Returns `true` if successful,
+     * `false` otherwise.
+     */
+    @Override
+    public boolean executeConfig(Rmq4jProperties.Connection connection, Rmq4jProperties.Config config, Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(config).requestId(Rmq4j.getCurrentSessionId());
+        boolean success = false;
+        try {
+            this.executeConfig(connection, config);
+            success = true;
+        } catch (Exception e) {
+            response
+                    .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
+                    .message("Rmq4j, executing config (exchange, queue, binding) failed")
+                    .debug("cause", e.getMessage())
+                    .errors(e)
+                    .customFields("config_details", Json4j.toJson(config));
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
+        }
+        return success;
+    }
+
+    /**
      * Executes the RabbitMQ configuration using the provided {@link CachingConnectionFactory} and configuration details.
      * <p>
      * This method creates a {@link RabbitAdmin} using the provided {@link CachingConnectionFactory} and then calls
@@ -864,6 +932,50 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         }
         RabbitAdmin adm = new RabbitAdmin(factory);
         this.executeConfig(adm, config);
+    }
+
+    /**
+     * Executes the RabbitMQ configuration using the provided {@link CachingConnectionFactory}, configuration details,
+     * and callback.
+     * <p>
+     * This method creates a {@link RabbitAdmin} instance using the provided {@link CachingConnectionFactory} and then
+     * applies the RabbitMQ configuration by calling {@link #executeConfig(RabbitAdmin, Rmq4jProperties.Config)}.
+     * <p>
+     * After attempting to apply the configuration, the method executes the provided {@link Rmq4jWrapCallback} with a
+     * response indicating whether the configuration process was successful or if it failed.
+     * <p>
+     * If the provided factory is null, the method returns without performing any actions.
+     * <p>
+     * If the configuration application is successful, the method returns {@code true}. If an exception occurs during
+     * the configuration process, the method catches the exception, logs the error details, updates the response to reflect
+     * the failure, and returns {@code false}. The callback is executed with the constructed response regardless of success
+     * or failure.
+     *
+     * @param factory  The {@link CachingConnectionFactory} used to create the {@link RabbitAdmin}.
+     * @param config   The configuration object containing the details needed to configure RabbitMQ.
+     * @param callback The callback to be executed after attempting to apply the configuration. The callback will receive
+     *                 a response indicating whether the configuration process was successful or if it failed.
+     * @return {@code true} if the configuration was successfully applied; {@code false} if an exception occurred.
+     */
+    @Override
+    public boolean executeConfig(CachingConnectionFactory factory, Rmq4jProperties.Config config, Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(config).requestId(Rmq4j.getCurrentSessionId());
+        boolean success = false;
+        try {
+            this.executeConfig(factory, config);
+            success = true;
+        } catch (Exception e) {
+            response
+                    .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
+                    .message("Rmq4j, executing config (exchange, queue, binding) failed")
+                    .debug("cause", e.getMessage())
+                    .errors(e)
+                    .customFields("config_details", Json4j.toJson(config));
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
+        }
+        return success;
     }
 
     /**
@@ -899,5 +1011,47 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         // declaring binding
         Optional<Binding> bind = this.createBinding(config);
         bind.ifPresent(adm::declareBinding);
+    }
+
+    /**
+     * Executes the RabbitMQ configuration using the provided {@link RabbitAdmin}, configuration details, and callback.
+     * <p>
+     * This method applies the RabbitMQ configuration by declaring the exchange, queue, and binding as specified
+     * in the provided {@link Rmq4jProperties.Config}. After attempting to apply the configuration, it executes the
+     * provided {@link Rmq4jWrapCallback} with a response indicating the success or failure of the operation.
+     * <p>
+     * The method first creates a response object using {@link HttpWrapBuilder} with the provided configuration details
+     * and the current session ID. It then attempts to apply the configuration by calling {@link #executeConfig(RabbitAdmin, Rmq4jProperties.Config)}.
+     * <p>
+     * If any exception occurs during the configuration process, the method catches the exception, logs the error details,
+     * and updates the response to reflect the failure. The response includes a status code, error message, and details about
+     * the configuration that was attempted.
+     * <p>
+     * Regardless of success or failure, the method ensures that the callback is executed with the constructed response.
+     *
+     * @param adm      The {@link RabbitAdmin} instance used to declare the exchange, queue, and binding.
+     * @param config   The configuration object containing the details needed to configure RabbitMQ.
+     * @param callback The callback to be executed after attempting to apply the configuration. The callback will receive
+     *                 a response indicating whether the configuration process was successful or if it failed.
+     */
+    @Override
+    public boolean executeConfig(RabbitAdmin adm, Rmq4jProperties.Config config, Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(config).requestId(Rmq4j.getCurrentSessionId());
+        boolean success = false;
+        try {
+            this.executeConfig(adm, config);
+            success = true;
+        } catch (Exception e) {
+            response
+                    .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
+                    .message("Rmq4j, executing config (exchange, queue, binding) failed")
+                    .debug("cause", e.getMessage())
+                    .errors(e)
+                    .customFields("config_details", Json4j.toJson(config));
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
+        }
+        return success;
     }
 }
