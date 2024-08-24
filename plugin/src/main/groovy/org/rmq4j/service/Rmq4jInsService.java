@@ -9,6 +9,8 @@ public interface Rmq4jInsService {
 
     void snapIns();
 
+    void snapIns(Rmq4jWrapCallback callback);
+
     boolean exists();
 
     Optional<CachingConnectionFactory> getWorker(String key);

@@ -1,8 +1,10 @@
 package org.rmq4j.service.impl;
 
+import org.rmq4j.common.Rmq4j;
 import org.rmq4j.config.props.Rmq4jProperties;
 import org.rmq4j.service.Rmq4jInsService;
 import org.rmq4j.service.Rmq4jService;
+import org.rmq4j.service.Rmq4jWrapCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
@@ -10,7 +12,10 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.unify4j.common.Collection4j;
+import org.unify4j.common.Json4j;
 import org.unify4j.common.String4j;
+import org.unify4j.model.builder.HttpStatusBuilder;
+import org.unify4j.model.builder.HttpWrapBuilder;
 
 import java.util.Map;
 import java.util.Optional;
@@ -62,6 +67,44 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
             }
             factories.put(entry.getKey(), factory.get());
             templates.put(entry.getKey(), template.get());
+        }
+    }
+
+    /**
+     * Initializes and caches RabbitMQ connections and templates for the configured clusters with callback handling.
+     * <p>
+     * This method first attempts to initialize the RabbitMQ connections and templates by calling the no-argument
+     * {@link #snapIns()} method. It creates an HTTP response builder with an initial "OK" status and the current
+     * session ID, which will be used to generate a response once the operation completes.
+     * <p>
+     * If the initialization fails due to an exception, the response builder is updated with an internal server error
+     * status, an error message, and additional debug information. The caught exception is also included in the response
+     * for detailed error tracking.
+     * <p>
+     * After the initialization attempt, if a {@link Rmq4jWrapCallback} is provided, it invokes the callback's
+     * {@code onCallback} method with the built HTTP response, which allows the caller to handle the outcome of the
+     * initialization process asynchronously.
+     *
+     * @param callback An optional {@link Rmq4jWrapCallback} that is triggered after the RabbitMQ connections and templates
+     *                 are initialized. The callback receives an HTTP response object that contains the result of the
+     *                 operation, including status and error details if any issues occurred.
+     */
+    @Override
+    public void snapIns(Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(null)
+                .requestId(Rmq4j.getCurrentSessionId())
+                .debug("all_connections", Json4j.toJson(rmq4jService.getConnections()));
+        try {
+            this.snapIns();
+        } catch (Exception e) {
+            response
+                    .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
+                    .message("creating multiples RabbitMQ connection failed")
+                    .debug("cause", e.getMessage())
+                    .errors(e);
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
         }
     }
 
