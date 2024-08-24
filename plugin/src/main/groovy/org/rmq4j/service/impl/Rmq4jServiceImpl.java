@@ -7,6 +7,8 @@ import org.rmq4j.service.Rmq4jService;
 import org.rmq4j.service.Rmq4jWrapCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.core.Exchange;
+import org.springframework.amqp.core.ExchangeBuilder;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -268,7 +270,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
-                    .message("creating connection factory failed")
+                    .message("Rmq4j, creating connection factory failed")
                     .debug("cause", e.getMessage())
                     .errors(e)
                     .customFields("conn_string", Json4j.toJson(connection));
@@ -326,7 +328,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
-                    .message("creating cache connection factory failed")
+                    .message("Rmq4j, creating cache connection factory failed")
                     .debug("cause", e.getMessage())
                     .errors(e)
                     .customFields("conn_string", Json4j.toJson(connection));
@@ -386,7 +388,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
-                    .message("creating RabbitMQ Template failed")
+                    .message("Rmq4j, creating RabbitMQ Template failed")
                     .debug("cause", e.getMessage())
                     .errors(e)
                     .customFields("conn_string", Json4j.toJson(connection));
@@ -446,7 +448,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
-                    .message("creating RabbitMQ Template failed")
+                    .message("Rmq4j, creating RabbitMQ Template failed")
                     .debug("cause", e.getMessage())
                     .errors(e)
                     .customFields("cache_conn_string", factory != null ? factory.getCacheProperties().toString() : "undefined cache connection factory");
@@ -506,7 +508,7 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
-                    .message("creating RabbitMQ Admin failed")
+                    .message("Rmq4j, creating RabbitMQ Admin failed")
                     .debug("cause", e.getMessage())
                     .errors(e)
                     .customFields("conn_string", Json4j.toJson(connection));
@@ -540,5 +542,108 @@ public class Rmq4jServiceImpl implements Rmq4jService {
             return form;
         }
         return String.format("%s%s", form, connection.getVirtualHost());
+    }
+
+    /**
+     * Creates a RabbitMQ exchange based on the provided configuration.
+     * <p>
+     * This method constructs a RabbitMQ exchange using the parameters defined in the provided {@link Rmq4jProperties.Config}.
+     * If the configuration or the exchange details within it are null, the method returns an empty {@link Optional}.
+     * <p>
+     * The method first checks the type of exchange (e.g., "fanout", "topic", "headers", or "direct") specified in the
+     * configuration. It uses the appropriate {@link ExchangeBuilder} method to create the corresponding exchange type.
+     * If the exchange type is not specified or is invalid, an {@link IllegalArgumentException} is thrown.
+     * <p>
+     * After determining the exchange type, the method configures additional exchange properties such as
+     * auto-delete, internal, delayed, durability, and any custom arguments. These properties are applied to the
+     * exchange using the {@link ExchangeBuilder}.
+     * <p>
+     * Finally, the exchange is built and returned wrapped in an {@link Optional}.
+     *
+     * @param config The configuration object containing the details needed to create the RabbitMQ exchange.
+     * @return An {@link Optional} containing the created {@link Exchange} if the configuration is valid; otherwise,
+     * an empty {@link Optional}.
+     * @throws IllegalArgumentException if the exchange type is not specified or is invalid.
+     */
+    @SuppressWarnings({"SpellCheckingInspection", "ExtractMethodRecommender"})
+    @Override
+    public Optional<Exchange> createExchange(Rmq4jProperties.Config config) {
+        if (config == null || config.getExchange() == null) {
+            return Optional.empty();
+        }
+        if (String4j.isEmpty(config.getExchange().getKind())) {
+            throw new IllegalArgumentException("Rmq4j, invalid type of exchange");
+        }
+        Rmq4jProperties.Exchange exchange = config.getExchange();
+        ExchangeBuilder builder;
+        switch (exchange.getKind().toLowerCase()) {
+            case "fanout":
+                builder = ExchangeBuilder.fanoutExchange(exchange.getName());
+                break;
+            case "topic":
+                builder = ExchangeBuilder.topicExchange(exchange.getName());
+                break;
+            case "headers":
+                builder = ExchangeBuilder.headersExchange(exchange.getName());
+                break;
+            case "direct":
+            default:
+                builder = ExchangeBuilder.directExchange(exchange.getName());
+                break;
+        }
+        if (exchange.isClearable()) {
+            builder.autoDelete();
+        }
+        if (exchange.isInternal()) {
+            builder.internal();
+        }
+        if (exchange.isDelayable()) {
+            builder.delayed();
+        }
+        if (Collection4j.isNotEmptyMap(exchange.getArguments())) {
+            builder.withArguments(exchange.getArguments());
+        }
+        Exchange e = builder
+                .durable(exchange.isDurable())
+                .build();
+        return Optional.of(e);
+    }
+
+    /**
+     * Creates a RabbitMQ exchange based on the provided configuration and handles the result through a callback.
+     * <p>
+     * This method attempts to create a RabbitMQ exchange using the provided {@link Rmq4jProperties.Config} by calling
+     * {@link #createExchange(Rmq4jProperties.Config)}. If the exchange is created successfully, it is returned wrapped in an {@link Optional}.
+     * <p>
+     * If an exception occurs during the exchange creation, the method constructs an error response using
+     * {@link HttpWrapBuilder}, capturing details such as the status code, error message, exception details, and the
+     * configuration that caused the failure. The error response is passed to the provided {@link Rmq4jWrapCallback}.
+     * <p>
+     * If the callback is not null, the method triggers the callback with the constructed response, allowing for
+     * asynchronous handling of the result.
+     *
+     * @param config   The configuration object containing the details needed to create the RabbitMQ exchange.
+     * @param callback The callback to handle the response after attempting to create the exchange.
+     * @return An {@link Optional} containing the created {@link Exchange} if the configuration is valid and the creation
+     * was successful; otherwise, an empty {@link Optional}.
+     */
+    @Override
+    public Optional<Exchange> createExchange(Rmq4jProperties.Config config, Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(config).requestId(Rmq4j.getCurrentSessionId());
+        Optional<Exchange> exchange = Optional.empty();
+        try {
+            exchange = this.createExchange(config);
+        } catch (Exception e) {
+            response
+                    .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
+                    .message("Rmq4j, creating exchange failed")
+                    .debug("cause", e.getMessage())
+                    .errors(e)
+                    .customFields("config_details", Json4j.toJson(config));
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
+        }
+        return exchange;
     }
 }

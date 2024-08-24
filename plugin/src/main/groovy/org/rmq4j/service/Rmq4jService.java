@@ -2,6 +2,7 @@ package org.rmq4j.service;
 
 import com.rabbitmq.client.ConnectionFactory;
 import org.rmq4j.config.props.Rmq4jProperties;
+import org.springframework.amqp.core.Exchange;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -54,4 +55,8 @@ public interface Rmq4jService {
     Optional<RabbitAdmin> createAdm(Rmq4jProperties.Connection connection, Rmq4jWrapCallback callback);
 
     String getURLConnSchema(Rmq4jProperties.Connection connection);
+
+    Optional<Exchange> createExchange(Rmq4jProperties.Config config);
+
+    Optional<Exchange> createExchange(Rmq4jProperties.Config config, Rmq4jWrapCallback callback);
 }
