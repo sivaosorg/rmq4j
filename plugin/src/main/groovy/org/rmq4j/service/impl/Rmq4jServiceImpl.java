@@ -20,8 +20,11 @@ import org.unify4j.model.builder.HttpStatusBuilder;
 import org.unify4j.model.builder.HttpWrapBuilder;
 import org.unify4j.model.enums.IconType;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @SuppressWarnings({"FieldCanBeLocal", "DuplicatedCode"})
 @Service
@@ -53,6 +56,14 @@ public class Rmq4jServiceImpl implements Rmq4jService {
     @Override
     public boolean isDebugging() {
         return properties.isDebugging();
+    }
+
+    /**
+     * @return true if the Rmq4j has been configured the collection of exchange, queue and binding, false otherwise
+     */
+    @Override
+    public boolean isAvailableConfigs() {
+        return this.isEnabled() && Collection4j.isNotEmpty(properties.getConfigs());
     }
 
     /**
@@ -102,6 +113,25 @@ public class Rmq4jServiceImpl implements Rmq4jService {
             return cluster;
         }
         return cluster.get().isEnabled() ? cluster : Optional.empty();
+    }
+
+    /**
+     * Retrieves a list of all enabled RabbitMQ configurations.
+     * <p>
+     * This method checks if any configurations are available by calling {@link #isAvailableConfigs()}.
+     * If no configurations are available, it returns an empty list.
+     * If configurations are available, it filters the configurations, selecting only those that are enabled.
+     * The method returns a list of enabled {@link Rmq4jProperties.Config} objects.
+     *
+     * @return A list of enabled {@link Rmq4jProperties.Config} objects. If no configurations are available or enabled,
+     * an empty list is returned.
+     */
+    @Override
+    public List<Rmq4jProperties.Config> getConfigsActivated() {
+        if (!this.isAvailableConfigs()) {
+            return Collections.emptyList();
+        }
+        return properties.getConfigs().stream().filter(Rmq4jProperties.Config::isEnabled).collect(Collectors.toList());
     }
 
     /**

@@ -6,6 +6,7 @@ import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -16,11 +17,15 @@ public interface Rmq4jService {
 
     boolean isDebugging();
 
+    boolean isAvailableConfigs();
+
     Map<String, Rmq4jProperties.Connection> getConnections();
 
     Optional<Rmq4jProperties.Connection> getConn(String key);
 
     Optional<Rmq4jProperties.Connection> getConnActivated(String key);
+
+    List<Rmq4jProperties.Config> getConfigsActivated();
 
     Optional<ConnectionFactory> createFactory(Rmq4jProperties.Connection connection);
 
