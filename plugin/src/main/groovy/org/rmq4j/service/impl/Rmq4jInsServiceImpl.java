@@ -90,7 +90,8 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
     public void snapIns(Rmq4jWrapCallback callback) {
         HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(null)
                 .requestId(Rmq4j.getCurrentSessionId())
-                .debug("all_connections", Json4j.toJson(rmq4jService.getConnections()));
+                .body(rmq4jService.getConnections())
+                .debug("all_connections_activated", Json4j.toJson(rmq4jService.getConnectionsActivated()));
         try {
             this.snapIns();
         } catch (Exception e) {
