@@ -20,10 +20,7 @@ import org.unify4j.model.builder.HttpStatusBuilder;
 import org.unify4j.model.builder.HttpWrapBuilder;
 import org.unify4j.model.enums.IconType;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @SuppressWarnings({"FieldCanBeLocal", "DuplicatedCode"})
@@ -113,6 +110,34 @@ public class Rmq4jServiceImpl implements Rmq4jService {
             return cluster;
         }
         return cluster.get().isEnabled() ? cluster : Optional.empty();
+    }
+
+    /**
+     * Retrieves a map of all enabled RabbitMQ cluster configurations.
+     * <p>
+     * This method first checks if the RabbitMQ service is enabled by calling {@link #isEnabled()}.
+     * If the service is not enabled, it returns an empty map.
+     * If the service is enabled, it iterates through all the available cluster configurations retrieved via
+     * {@link #getConnections()}.
+     * For each configuration, it checks if the cluster is enabled.
+     * Only the enabled clusters added to a new map, which is then returned.
+     *
+     * @return A map containing the names and {@link Rmq4jProperties.Connection} objects of all enabled RabbitMQ clusters.
+     * If the service is not enabled or no clusters are enabled, an empty map is returned.
+     */
+    @Override
+    public Map<String, Rmq4jProperties.Connection> getConnectionsActivated() {
+        if (!this.isEnabled()) {
+            return Collections.emptyMap();
+        }
+        Map<String, Rmq4jProperties.Connection> connections = new HashMap<>();
+        for (Map.Entry<String, Rmq4jProperties.Connection> entry : this.getConnections().entrySet()) {
+            if (!entry.getValue().isEnabled()) {
+                continue;
+            }
+            connections.put(entry.getKey(), entry.getValue());
+        }
+        return connections;
     }
 
     /**

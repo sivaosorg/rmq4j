@@ -53,10 +53,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
         if (this.exists()) {
             return;
         }
-        for (Map.Entry<String, Rmq4jProperties.Connection> entry : rmq4jService.getConnections().entrySet()) {
-            if (!entry.getValue().isEnabled()) {
-                continue;
-            }
+        for (Map.Entry<String, Rmq4jProperties.Connection> entry : rmq4jService.getConnectionsActivated().entrySet()) {
             Optional<CachingConnectionFactory> factory = rmq4jService.createCacheConnFactory(entry.getValue());
             if (!factory.isPresent()) {
                 continue;

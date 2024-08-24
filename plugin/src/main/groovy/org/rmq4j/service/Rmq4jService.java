@@ -25,6 +25,8 @@ public interface Rmq4jService {
 
     Optional<Rmq4jProperties.Connection> getConnActivated(String key);
 
+    Map<String, Rmq4jProperties.Connection> getConnectionsActivated();
+
     List<Rmq4jProperties.Config> getConfigsActivated();
 
     Optional<ConnectionFactory> createFactory(Rmq4jProperties.Connection connection);
