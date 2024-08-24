@@ -301,6 +301,7 @@ public class Rmq4jProperties implements Serializable {
         private boolean durable = false; // If true, the queue will survive server restarts.
         private boolean exclusive = false; // If true, the queue is exclusive to this connection and will be deleted once the connection closes.
         private boolean clearable = false; // If true, the queue will be deleted once no longer used.
+        private Map<String, Object> arguments = new HashMap<>(); // arguments, Custom arguments for the exchange as key-value. This can include settings like retry count.
 
         public String getName() {
             return name;
@@ -333,6 +334,14 @@ public class Rmq4jProperties implements Serializable {
         public void setClearable(boolean clearable) {
             this.clearable = clearable;
         }
+
+        public Map<String, Object> getArguments() {
+            return arguments;
+        }
+
+        public void setArguments(Map<String, Object> arguments) {
+            this.arguments = arguments;
+        }
     }
 
     public static class Bind {
@@ -341,6 +350,7 @@ public class Rmq4jProperties implements Serializable {
         }
 
         private String routingKey; // routing_key, Routing key for the binding. Used to route messages to the correct queue.
+        private Map<String, Object> arguments = new HashMap<>(); // arguments, Custom arguments for the exchange as key-value. This can include settings like retry count.
 
         public String getRoutingKey() {
             return routingKey;
@@ -348,6 +358,14 @@ public class Rmq4jProperties implements Serializable {
 
         public void setRoutingKey(String routingKey) {
             this.routingKey = routingKey;
+        }
+
+        public Map<String, Object> getArguments() {
+            return arguments;
+        }
+
+        public void setArguments(Map<String, Object> arguments) {
+            this.arguments = arguments;
         }
     }
 }

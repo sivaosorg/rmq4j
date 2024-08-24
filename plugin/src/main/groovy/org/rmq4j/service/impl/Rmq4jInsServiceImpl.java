@@ -62,6 +62,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
             if (!template.isPresent()) {
                 continue;
             }
+
             factories.put(entry.getKey(), factory.get());
             templates.put(entry.getKey(), template.get());
         }
@@ -88,6 +89,12 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
      */
     @Override
     public void snapIns(Rmq4jWrapCallback callback) {
+        if (!rmq4jService.isEnabled()) {
+            return;
+        }
+        if (this.exists()) {
+            return;
+        }
         HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(null)
                 .requestId(Rmq4j.getCurrentSessionId())
                 .body(rmq4jService.getConnections())

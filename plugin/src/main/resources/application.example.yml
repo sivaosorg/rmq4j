@@ -54,8 +54,12 @@ spring:
           durable: false # If true, the queue will survive server restarts.
           exclusive: false # If true, the queue is exclusive to this connection and will be deleted once the connection closes.
           clearable: false # If true, the queue will be deleted once no longer used.
+          arguments: # Custom arguments for the exchange as key-value. This can include settings like retry count.
+            retry: 1
         bind: # Binding settings to link the exchange and the queue.
           routing_key: "" # Routing key for the binding. Used to route messages to the correct queue.
+          arguments: # Custom arguments for the exchange as key-value. This can include settings like retry count.
+            retry: 1
       - cluster_key: "cluster01"
         dispatch_key: "DP002"
         desc: "publish logs for changes delivery status"

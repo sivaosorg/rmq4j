@@ -7,8 +7,8 @@ import org.rmq4j.service.Rmq4jService;
 import org.rmq4j.service.Rmq4jWrapCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.core.Exchange;
-import org.springframework.amqp.core.ExchangeBuilder;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -571,6 +571,9 @@ public class Rmq4jServiceImpl implements Rmq4jService {
         if (config == null || config.getExchange() == null) {
             return Optional.empty();
         }
+        if (String4j.isEmpty(config.getExchange().getName())) {
+            throw new IllegalArgumentException("Rmq4j, invalid name of exchange");
+        }
         if (String4j.isEmpty(config.getExchange().getKind())) {
             throw new IllegalArgumentException("Rmq4j, invalid type of exchange");
         }
@@ -645,5 +648,256 @@ public class Rmq4jServiceImpl implements Rmq4jService {
             callback.onCallback(response.build());
         }
         return exchange;
+    }
+
+    /**
+     * Creates a RabbitMQ queue based on the provided configuration.
+     * <p>
+     * This method constructs a RabbitMQ queue using the parameters defined in the provided {@link Rmq4jProperties.Config}.
+     * If the configuration or the queue details within it are null, the method returns an empty {@link Optional}.
+     * <p>
+     * The method first validates the queue name by checking if the exchange name in the configuration is empty.
+     * If the exchange name is invalid (empty or null), it throws an {@link IllegalArgumentException}.
+     * <p>
+     * After validating the input, the method creates a new {@link Queue} instance using the queue name, durability,
+     * exclusivity, and auto-delete properties specified in the configuration. If any custom arguments are provided,
+     * they are added to the queue using the {@link Queue#addArgument(String, Object)} method.
+     * <p>
+     * Finally, the queue is returned wrapped in an {@link Optional}.
+     *
+     * @param config The configuration object containing the details needed to create the RabbitMQ queue.
+     * @return An {@link Optional} containing the created {@link Queue} if the configuration is valid; otherwise,
+     * an empty {@link Optional}.
+     * @throws IllegalArgumentException if the queue name is not specified or is invalid.
+     */
+    @Override
+    public Optional<Queue> createQueue(Rmq4jProperties.Config config) {
+        if (config == null || config.getQueue() == null) {
+            return Optional.empty();
+        }
+        if (String4j.isEmpty(config.getExchange().getName())) {
+            throw new IllegalArgumentException("Rmq4j, invalid name of queue");
+        }
+        Rmq4jProperties.Queue queue = config.getQueue();
+        Queue q = new Queue(queue.getName(), queue.isDurable(), queue.isExclusive(), queue.isClearable());
+        if (Collection4j.isNotEmptyMap(queue.getArguments())) {
+            for (Map.Entry<String, Object> entry : queue.getArguments().entrySet()) {
+                q.addArgument(entry.getKey(), entry.getValue());
+            }
+        }
+        return Optional.of(q);
+    }
+
+    /**
+     * Creates a RabbitMQ queue based on the provided configuration and invokes a callback upon completion.
+     * <p>
+     * This method first attempts to create a RabbitMQ queue using the provided {@link Rmq4jProperties.Config} by calling
+     * {@link #createQueue(Rmq4jProperties.Config)}. If the queue creation is successful, the queue is returned wrapped in
+     * an {@link Optional}.
+     * <p>
+     * If the queue creation fails due to any exception, the method catches the exception and builds an error response using
+     * {@link HttpWrapBuilder}. The error response includes details such as the status code, error message, and the configuration
+     * details that caused the failure. This information is then passed to the provided {@link Rmq4jWrapCallback} if it is not null.
+     * <p>
+     * Finally, the callback's {@code onCallback} method is invoked with the response, whether the queue creation succeeded or failed.
+     *
+     * @param config   The configuration object containing the details needed to create the RabbitMQ queue.
+     * @param callback The callback interface to be invoked with the result of the queue creation process.
+     * @return An {@link Optional} containing the created {@link Queue} if the configuration is valid and the queue creation
+     * succeeds; otherwise, an empty {@link Optional}.
+     */
+    @Override
+    public Optional<Queue> createQueue(Rmq4jProperties.Config config, Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(config).requestId(Rmq4j.getCurrentSessionId());
+        Optional<Queue> queue = Optional.empty();
+        try {
+            queue = this.createQueue(config);
+        } catch (Exception e) {
+            response
+                    .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
+                    .message("Rmq4j, creating queue failed")
+                    .debug("cause", e.getMessage())
+                    .errors(e)
+                    .customFields("config_details", Json4j.toJson(config));
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
+        }
+        return queue;
+    }
+
+    /**
+     * Creates a RabbitMQ binding based on the provided configuration.
+     * <p>
+     * This method constructs a RabbitMQ binding by first creating a queue and an exchange using the provided
+     * {@link Rmq4jProperties.Config}, and then binding the queue to the exchange with a specified routing key.
+     * <p>
+     * If the configuration or the binding details within it are null, the method returns an empty {@link Optional}.
+     * <p>
+     * The method first validates the input configuration to ensure that it is not null and that it contains valid binding
+     * details. If any of these checks fail, an empty {@link Optional} is returned.
+     * <p>
+     * The method then attempts to create the necessary queue and exchange using the {@link #createQueue(Rmq4jProperties.Config)}
+     * and {@link #createExchange(Rmq4jProperties.Config)} methods. It uses the {@link BindingBuilder} to bind the created queue
+     * to the exchange using the routing key provided in the configuration. The binding is created without additional arguments by default.
+     * <p>
+     * If the binding configuration includes custom arguments, they are added to the binding using the {@link Binding#addArgument(String, Object)}
+     * method.
+     * <p>
+     * Finally, the binding is returned wrapped in an {@link Optional}. If any step fails or the binding cannot be created,
+     * an empty {@link Optional} is returned.
+     *
+     * @param config The configuration object containing the details needed to create the RabbitMQ binding.
+     * @return An {@link Optional} containing the created {@link Binding} if the configuration is valid; otherwise,
+     * an empty {@link Optional}.
+     */
+    @SuppressWarnings({"OptionalGetWithoutIsPresent"})
+    @Override
+    public Optional<Binding> createBinding(Rmq4jProperties.Config config) {
+        if (config == null || config.getBind() == null) {
+            return Optional.empty();
+        }
+        Rmq4jProperties.Bind bind = config.getBind();
+        Binding binding = BindingBuilder
+                .bind(this.createQueue(config).get())
+                .to(this.createExchange(config).get())
+                .with(bind.getRoutingKey())
+                .noargs();
+        if (Collection4j.isNotEmptyMap(binding.getArguments())) {
+            for (Map.Entry<String, Object> entry : bind.getArguments().entrySet()) {
+                binding.addArgument(entry.getKey(), entry.getValue());
+            }
+        }
+        return Optional.of(binding);
+    }
+
+    /**
+     * Creates a RabbitMQ binding based on the provided configuration and executes a callback upon completion.
+     * <p>
+     * This method constructs a RabbitMQ binding by first creating a queue and an exchange using the provided
+     * {@link Rmq4jProperties.Config}, and then binding the queue to the exchange with a specified routing key.
+     * If the binding creation succeeds or fails, the method invokes the provided {@link Rmq4jWrapCallback} with
+     * the appropriate response, which includes details about the success or failure of the operation.
+     * <p>
+     * If the configuration or the binding details within it are null, the method returns an empty {@link Optional}
+     * and sends a failure response via the callback.
+     * <p>
+     * The method first validates the input configuration to ensure that it is not null and that it contains valid binding
+     * details. If any of these checks fail, an empty {@link Optional} is returned, and an error message is added to the
+     * callback response.
+     * <p>
+     * The method then attempts to create the necessary queue and exchange using the {@link #createQueue(Rmq4jProperties.Config)}
+     * and {@link #createExchange(Rmq4jProperties.Config)} methods. It uses the {@link BindingBuilder} to bind the created queue
+     * to the exchange using the routing key provided in the configuration. The binding is created without additional arguments by default.
+     * <p>
+     * If the binding configuration includes custom arguments, they are added to the binding using the {@link Binding#addArgument(String, Object)}
+     * method.
+     * <p>
+     * If any exception occurs during the binding creation process, the method catches the exception, logs the error details,
+     * and includes them in the callback response. The callback is then executed with the constructed response.
+     * <p>
+     * Finally, the created binding is returned wrapped in an {@link Optional}. If the binding cannot be created,
+     * an empty {@link Optional} is returned.
+     *
+     * @param config   The configuration object containing the details needed to create the RabbitMQ binding.
+     * @param callback The callback to be executed after the binding creation process is completed. The callback
+     *                 will receive a response indicating whether the binding creation was successful or if it failed.
+     * @return An {@link Optional} containing the created {@link Binding} if the configuration is valid; otherwise,
+     * an empty {@link Optional}.
+     */
+    @Override
+    public Optional<Binding> createBinding(Rmq4jProperties.Config config, Rmq4jWrapCallback callback) {
+        HttpWrapBuilder<?> response = new HttpWrapBuilder<>().ok(config).requestId(Rmq4j.getCurrentSessionId());
+        Optional<Binding> bind = Optional.empty();
+        try {
+            bind = this.createBinding(config);
+        } catch (Exception e) {
+            response
+                    .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
+                    .message("Rmq4j, creating binding failed")
+                    .debug("cause", e.getMessage())
+                    .errors(e)
+                    .customFields("config_details", Json4j.toJson(config));
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
+        }
+        return bind;
+    }
+
+    /**
+     * Executes the RabbitMQ configuration using the provided connection and configuration details.
+     * <p>
+     * This method first creates a {@link CachingConnectionFactory} using the provided {@link Rmq4jProperties.Connection}.
+     * If the connection factory is successfully created, it calls {@link #executeConfig(CachingConnectionFactory, Rmq4jProperties.Config)}
+     * to apply the RabbitMQ configuration using the created connection factory.
+     * <p>
+     * If the connection factory cannot be created, the method returns without executing any further actions.
+     *
+     * @param connection The connection details required to create a {@link CachingConnectionFactory}.
+     * @param config     The configuration object containing the details needed to configure RabbitMQ.
+     */
+    @Override
+    public void executeConfig(Rmq4jProperties.Connection connection, Rmq4jProperties.Config config) {
+        Optional<CachingConnectionFactory> factory = this.createCacheConnFactory(connection);
+        if (!factory.isPresent()) {
+            return;
+        }
+        this.executeConfig(factory.get(), config);
+    }
+
+    /**
+     * Executes the RabbitMQ configuration using the provided {@link CachingConnectionFactory} and configuration details.
+     * <p>
+     * This method creates a {@link RabbitAdmin} using the provided {@link CachingConnectionFactory} and then calls
+     * {@link #executeConfig(RabbitAdmin, Rmq4jProperties.Config)} to apply the RabbitMQ configuration.
+     * <p>
+     * If the provided factory is null, the method returns without executing any further actions.
+     *
+     * @param factory The {@link CachingConnectionFactory} used to create the {@link RabbitAdmin}.
+     * @param config  The configuration object containing the details needed to configure RabbitMQ.
+     */
+    @Override
+    public void executeConfig(CachingConnectionFactory factory, Rmq4jProperties.Config config) {
+        if (factory == null) {
+            return;
+        }
+        RabbitAdmin adm = new RabbitAdmin(factory);
+        this.executeConfig(adm, config);
+    }
+
+    /**
+     * Executes the RabbitMQ configuration using the provided {@link RabbitAdmin} and configuration details.
+     * <p>
+     * This method applies the RabbitMQ configuration by declaring the exchange, queue, and binding as specified
+     * in the provided {@link Rmq4jProperties.Config}.
+     * <p>
+     * The method first checks if the provided {@link RabbitAdmin} and configuration are valid (not null).
+     * If the configuration is valid, it creates and declares the exchange, queue, and binding using the
+     * corresponding methods: {@link #createExchange(Rmq4jProperties.Config)}, {@link #createQueue(Rmq4jProperties.Config)},
+     * and {@link #createBinding(Rmq4jProperties.Config)}.
+     * <p>
+     * If any of these steps fail or the configuration is invalid, the method returns without performing any actions.
+     *
+     * @param adm    The {@link RabbitAdmin} instance used to declare the exchange, queue, and binding.
+     * @param config The configuration object containing the details needed to configure RabbitMQ.
+     */
+    @Override
+    public void executeConfig(RabbitAdmin adm, Rmq4jProperties.Config config) {
+        if (adm == null || config == null || config.getExchange() == null ||
+                config.getQueue() == null || config.getBind() == null) {
+            return;
+        }
+        // declaring exchange
+        Optional<Exchange> exchange = this.createExchange(config);
+        exchange.ifPresent(adm::declareExchange);
+
+        // declaring queue
+        Optional<Queue> queue = this.createQueue(config);
+        queue.ifPresent(adm::declareQueue);
+
+        // declaring binding
+        Optional<Binding> bind = this.createBinding(config);
+        bind.ifPresent(adm::declareBinding);
     }
 }
