@@ -1,13 +1,21 @@
 package org.rmq4j.common;
 
+import org.rmq4j.config.Rmq4jBeanConfig;
+import org.rmq4j.service.Rmq4jInsService;
+import org.rmq4j.service.impl.Rmq4jInsServiceImpl;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.unify4j.common.Object4j;
 import org.unify4j.common.UniqueId4j;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Rmq4j {
+    protected static final Lock lock = new ReentrantLock();
+    protected static Rmq4jInsService service;
 
     /**
      * @return the HTTP servlet request, class {@link HttpServletRequest}
@@ -53,5 +61,25 @@ public class Rmq4j {
         }
         HttpSession session = request.getSession(false); // Pass false to prevent creating a new session if one does not exist
         return (session != null) ? session.getId() : null;
+    }
+
+    /**
+     * Provides an instance of Rmq4jInsService.
+     * If an instance is already available, returns it.
+     * Otherwise, retrieves and returns a new instance using Rmq4jBeanConfig.
+     *
+     * @return An instance of Rmq4jInsService, class {@link Rmq4jInsService}
+     */
+    public static Rmq4jInsService insProvider() {
+        lock.lock();
+        try {
+            if (Object4j.allNotNull(service)) {
+                return service;
+            }
+            service = Rmq4jBeanConfig.getBean(Rmq4jInsServiceImpl.class);
+            return service;
+        } finally {
+            lock.unlock();
+        }
     }
 }

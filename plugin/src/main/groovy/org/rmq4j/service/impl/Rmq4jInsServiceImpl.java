@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @SuppressWarnings({"FieldCanBeLocal", "DuplicatedCode"})
 @Service
@@ -30,7 +32,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
     protected static final Logger logger = LoggerFactory.getLogger(Rmq4jInsServiceImpl.class);
     protected final Map<String, CachingConnectionFactory> factories = new ConcurrentHashMap<>();
     protected final Map<String, RabbitTemplate> templates = new ConcurrentHashMap<>();
-
+    protected final Lock lock = new ReentrantLock();
     protected final Rmq4jService rmq4jService;
 
     @Autowired
@@ -54,10 +56,11 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
             @Override
             public void onCallback(WrapResponse<?> response) {
                 if (response.isSuccess()) {
-                    logger.info("{} Rmq4j, connected successfully", IconType.SUCCESS.getCode());
+                    logger.info("{} Rmq4j, connected successfully ({})", IconType.SUCCESS.getCode(), response.getStatusCode());
                 }
                 if (response.isError()) {
-                    logger.error("{} {}, [facing]: {}", IconType.ERROR.getCode(), response.getMessage(), Json4j.toJson(response.getDebug()));
+                    logger.error("{} ({}) {}, {}", IconType.ERROR.getCode(), response.getStatusCode(),
+                            response.getMessage(), Json4j.toJson(response.getDebug()));
                 }
             }
         });
@@ -88,7 +91,6 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
                 .ok(rmq4jService.getConnections())
                 .requestId(Rmq4j.getCurrentSessionId())
                 .debug("all_connections_activated", Json4j.toJson(rmq4jService.getConnectionsActivated()));
-
         if (!rmq4jService.isEnabled()) {
             response
                     .statusCode(HttpStatusBuilder.SERVICE_UNAVAILABLE)
@@ -105,6 +107,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
             }
             return;
         }
+        lock.lock();
         try {
             for (Map.Entry<String, Rmq4jProperties.Connection> entry : rmq4jService.getConnectionsActivated().entrySet()) {
                 Optional<CachingConnectionFactory> factory = rmq4jService.createCacheConnFactory(entry.getValue(), callback);
@@ -132,15 +135,20 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
                 factories.put(entry.getKey(), factory.get());
                 templates.put(entry.getKey(), template.get());
             }
+            if (callback != null) {
+                callback.onCallback(response.build());
+            }
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
                     .message("Rmq4j, creating multiples RabbitMQ connection failed")
                     .debug("cause", e.getMessage())
                     .errors(e);
-        }
-        if (callback != null) {
-            callback.onCallback(response.build());
+            if (callback != null) {
+                callback.onCallback(response.build());
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
