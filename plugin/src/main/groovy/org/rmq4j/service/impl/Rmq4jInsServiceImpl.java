@@ -114,7 +114,7 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
                 if (!factory.isPresent()) {
                     break;
                 }
-                Optional<RabbitTemplate> template = rmq4jService.dispatch(factory.get(), callback);
+                Optional<RabbitTemplate> template = rmq4jService.dispatch(factory.get(), null);
                 if (!template.isPresent()) {
                     break;
                 }
@@ -135,20 +135,17 @@ public class Rmq4jInsServiceImpl implements Rmq4jInsService {
                 factories.put(entry.getKey(), factory.get());
                 templates.put(entry.getKey(), template.get());
             }
-            if (callback != null) {
-                callback.onCallback(response.build());
-            }
         } catch (Exception e) {
             response
                     .statusCode(HttpStatusBuilder.INTERNAL_SERVER_ERROR)
                     .message("Rmq4j, creating multiples RabbitMQ connection failed")
                     .debug("cause", e.getMessage())
                     .errors(e);
-            if (callback != null) {
-                callback.onCallback(response.build());
-            }
         } finally {
             lock.unlock();
+        }
+        if (callback != null) {
+            callback.onCallback(response.build());
         }
     }
 
